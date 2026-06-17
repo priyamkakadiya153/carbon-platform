@@ -32,11 +32,10 @@ export const InsightCard = ({ insight, index, committed = false, onToggle }: Ins
   return (
     <article
       aria-label={`Insight ${index + 1}: ${categoryLabel} — ${insight.action}`}
-      onClick={onToggle}
       className={`
         bg-white/80 dark:bg-slate-900/60 backdrop-blur-md rounded-2xl border shadow-sm p-5
         hover:shadow-md transition-all duration-300 animate-fade-in relative overflow-hidden
-        ${onToggle ? 'cursor-pointer' : ''}
+        focus-within:ring-2 focus-within:ring-emerald-500/20
         ${
           committed
             ? 'border-emerald-500 dark:border-emerald-500/60 ring-2 ring-emerald-500/10 dark:ring-emerald-500/5 bg-emerald-50/10 dark:bg-emerald-950/5'
@@ -79,18 +78,21 @@ export const InsightCard = ({ insight, index, committed = false, onToggle }: Ins
 
             {/* Commit Checkbox Indicator */}
             {onToggle && (
-              <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                <label htmlFor={`commit-${index}`} className="sr-only">Commit to {insight.action}</label>
+              <div className="flex items-center gap-1.5 relative z-20">
                 <input
                   type="checkbox"
                   id={`commit-${index}`}
                   checked={committed}
                   onChange={onToggle}
-                  className="w-4 h-4 rounded border-gray-300 dark:border-slate-700 text-emerald-600 dark:text-emerald-500 focus:ring-emerald-500 accent-emerald-500 dark:accent-emerald-400"
+                  className="w-4 h-4 rounded border-gray-300 dark:border-slate-700 text-emerald-600 dark:text-emerald-500 focus:ring-emerald-500 accent-emerald-500 dark:accent-emerald-400 cursor-pointer"
                 />
-                <span className="text-xs font-bold text-gray-500 dark:text-slate-400 hidden sm:inline">
+                <label
+                  htmlFor={`commit-${index}`}
+                  className="text-xs font-bold text-gray-500 dark:text-slate-400 hidden sm:inline cursor-pointer before:absolute before:inset-0"
+                >
+                  <span className="sr-only">Commit to {insight.action}</span>
                   {committed ? 'Committed' : 'Commit'}
-                </span>
+                </label>
               </div>
             )}
           </div>
