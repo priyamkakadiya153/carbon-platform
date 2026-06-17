@@ -27,17 +27,9 @@ export const ActionPlanDashboard = () => {
     ? result.breakdown 
     : (history.length > 0 ? history[0].breakdown : null);
 
-  const baselineRanked = result 
-    ? result.ranked_categories 
-    : (history.length > 0 ? history[0].ranked_categories : []);
-
   // 2. Calculate savings metrics
   const completedSavings = committedActions.reduce((acc, curr) => {
     return acc + (curr.completed ? curr.estimated_saving_kg : 0);
-  }, 0);
-
-  const committedSavings = committedActions.reduce((acc, curr) => {
-    return acc + curr.estimated_saving_kg;
   }, 0);
 
   const netProjected = Math.max(0, baselineKg - completedSavings);
