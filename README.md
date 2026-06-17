@@ -17,7 +17,7 @@
 ## Live Demo
 
 The platform is deployed and live at:
-👉 **[https://carbon-platform-962545646921.us-central1.run.app](https://carbon-platform-962545646921.us-central1.run.app)**
+👉 **[https://carbon-platform.onrender.com](https://carbon-platform.onrender.com)**
 
 ---
 
