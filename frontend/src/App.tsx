@@ -23,10 +23,12 @@ const NavLink = ({
   label,
   active,
   onClick,
+  className = '',
 }: {
   label: string;
   active: boolean;
   onClick: () => void;
+  className?: string;
 }) => (
   <button
     onClick={onClick}
@@ -39,6 +41,7 @@ const NavLink = ({
           ? 'bg-primary-200 text-slate-955 shadow-md shadow-primary-200/20 dark:bg-primary-500 dark:text-white'
           : 'text-gray-600 dark:text-slate-300 hover:text-primary-700 dark:hover:text-primary-400 hover:bg-primary-50 dark:hover:bg-slate-800'
       }
+      ${className}
     `}
   >
     {label}
@@ -54,6 +57,8 @@ function AppContent() {
   const isLoadingHistory = useCarbonStore(s => s.isLoadingHistory);
   const fetchHistory = useCarbonStore(s => s.fetchHistory);
   const reset = useCarbonStore(s => s.reset);
+
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -109,22 +114,22 @@ function AppContent() {
           <button
             onClick={reset}
             aria-label="Carbon Footprint Platform — return to calculator"
-            className="flex items-center gap-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-lg p-1.5 hover:opacity-95 transition-opacity"
+            className="flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-lg p-1 hover:opacity-95 transition-opacity"
           >
-            <span className="text-2xl animate-pulse-slow" aria-hidden="true">
+            <span className="text-xl sm:text-2xl animate-pulse-slow" aria-hidden="true">
               🌱
             </span>
             <div className="text-left font-display">
-              <span className="block text-sm font-extrabold text-gray-900 dark:text-white leading-tight tracking-tight">
+              <span className="block text-xs sm:text-sm font-extrabold text-gray-900 dark:text-white leading-tight tracking-tight">
                 Carbon Platform
               </span>
-              <span className="block text-xs text-primary-600 dark:text-primary-400 font-bold leading-tight">
+              <span className="block text-[10px] sm:text-xs text-primary-600 dark:text-primary-400 font-bold leading-tight">
                 Understand · Track · Reduce
               </span>
             </div>
           </button>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {/* Theme Toggle Button */}
             <button
               onClick={() => setDarkMode(!darkMode)}
@@ -136,8 +141,8 @@ function AppContent() {
               </span>
             </button>
 
-            {/* Navigation */}
-            <nav aria-label="Main navigation">
+            {/* Desktop Navigation */}
+            <nav aria-label="Main navigation" className="hidden sm:block">
               <ul className="flex items-center gap-1.5 list-none m-0 p-0">
                 <li>
                   <NavLink
@@ -158,8 +163,72 @@ function AppContent() {
                 </li>
               </ul>
             </nav>
+
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="sm:hidden p-2 rounded-xl border border-gray-200/60 dark:border-slate-800 bg-white/50 dark:bg-slate-850 hover:bg-gray-50 dark:hover:bg-slate-800 text-gray-600 dark:text-slate-300 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              aria-expanded={isMenuOpen}
+              aria-label="Toggle main navigation menu"
+            >
+              <span className="text-lg flex items-center justify-center h-5 w-5">
+                {isMenuOpen ? (
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                )}
+              </span>
+            </button>
           </div>
         </div>
+
+        {/* Mobile Navigation Dropdown */}
+        {isMenuOpen && (
+          <nav
+            aria-label="Mobile navigation"
+            className="sm:hidden border-t border-gray-200/50 dark:border-slate-800/40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md animate-fade-in"
+          >
+            <ul className="flex flex-col gap-2 p-4 list-none m-0">
+              <li>
+                <NavLink
+                  label="Calculate"
+                  active={step === 'form' || step === 'results'}
+                  onClick={() => {
+                    setStep(result ? 'results' : 'form');
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full text-left justify-start block"
+                />
+              </li>
+              <li>
+                <NavLink
+                  label="Action Plan"
+                  active={step === 'action-plan'}
+                  onClick={() => {
+                    setStep('action-plan');
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full text-left justify-start block"
+                />
+              </li>
+              <li>
+                <NavLink
+                  label="History"
+                  active={step === 'history'}
+                  onClick={() => {
+                    handleHistoryClick();
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full text-left justify-start block"
+                />
+              </li>
+            </ul>
+          </nav>
+        )}
       </header>
 
       {/* ------------------------------------------------------------------ */}
