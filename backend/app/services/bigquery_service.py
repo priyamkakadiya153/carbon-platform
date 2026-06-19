@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import threading
 from datetime import UTC, datetime
 
 from google.cloud import bigquery
@@ -19,6 +20,23 @@ from google.cloud import bigquery
 from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Lazy-loaded cached client and thread safety lock
+# ---------------------------------------------------------------------------
+_bigquery_client: bigquery.Client | None = None
+_client_lock = threading.Lock()
+
+
+def _get_client(project_id: str) -> bigquery.Client:
+    """Return a cached BigQuery client instance (lazy-loaded and thread-safe)."""
+    global _bigquery_client
+    if _bigquery_client is None:
+        with _client_lock:
+            if _bigquery_client is None:
+                _bigquery_client = bigquery.Client(project=project_id)
+    return _bigquery_client
+
 
 # BigQuery schema for carbon_analytics.carbon_events:
 # timestamp      TIMESTAMP   — UTC event time
@@ -38,7 +56,7 @@ def _write_to_bigquery(
     project_id: str,
 ) -> None:
     """Synchronous BigQuery insert (runs in thread-pool executor)."""
-    client = bigquery.Client(project=project_id)
+    client = _get_client(project_id)
     table_id = f"{project_id}.{dataset}.{table}"
 
     rows = [

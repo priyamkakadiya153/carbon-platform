@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import threading
 from typing import Any
 
 import vertexai
@@ -24,6 +25,27 @@ logger = logging.getLogger(__name__)
 
 class GeminiUnavailableError(Exception):
     """Raised when Gemini cannot produce a valid response (network, parse, timeout)."""
+
+
+# ---------------------------------------------------------------------------
+# Lazy-loaded cached Gemini components and thread safety lock
+# ---------------------------------------------------------------------------
+_vertexai_initialized = False
+_model_instance: GenerativeModel | None = None
+_gemini_lock = threading.Lock()
+
+
+def _get_model(project_id: str, region: str, model_name: str) -> GenerativeModel:
+    """Initialize Vertex AI and cache GenerativeModel (lazy-loaded and thread-safe)."""
+    global _vertexai_initialized, _model_instance
+    if _model_instance is None:
+        with _gemini_lock:
+            if _model_instance is None:
+                if not _vertexai_initialized:
+                    vertexai.init(project=project_id, location=region)
+                    _vertexai_initialized = True
+                _model_instance = GenerativeModel(model_name)
+    return _model_instance
 
 
 def _build_prompt(
@@ -95,9 +117,11 @@ async def generate_insights_gemini(
     settings = get_settings()
 
     try:
-        vertexai.init(project=settings.PROJECT_ID, location=settings.REGION)
-
-        model = GenerativeModel(settings.GEMINI_MODEL)
+        model = _get_model(
+            project_id=settings.PROJECT_ID,
+            region=settings.REGION,
+            model_name=settings.GEMINI_MODEL,
+        )
 
         prompt = _build_prompt(ranked_categories, breakdown, total_kg)
 
@@ -126,7 +150,7 @@ async def generate_insights_gemini(
             raw_text = raw_text.split("\n", 1)[1]
             raw_text = raw_text.rsplit("```", 1)[0].strip()
 
-        raw_insights: list[dict[str, Any]] = json.loads(raw_text)
+        raw_insights = json.loads(raw_text)
 
         if not isinstance(raw_insights, list) or len(raw_insights) == 0:
             raise ValueError("Gemini returned empty or non-list JSON")
@@ -134,6 +158,8 @@ async def generate_insights_gemini(
         # Parse and validate each insight through Pydantic
         items: list[InsightItem] = []
         for idx, raw in enumerate(raw_insights[:3], start=1):
+            if not isinstance(raw, dict):
+                raise ValueError("Gemini returned non-dictionary item in the array")
             raw["priority"] = idx  # Normalise priority to 1-3 sequence
             items.append(InsightItem(**raw))
 

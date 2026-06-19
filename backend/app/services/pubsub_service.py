@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import threading
 from datetime import UTC, datetime
 
 import google.cloud.pubsub_v1 as pubsub_v1
@@ -21,6 +22,22 @@ from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
+# ---------------------------------------------------------------------------
+# Lazy-loaded cached client and thread safety lock
+# ---------------------------------------------------------------------------
+_publisher_client: pubsub_v1.PublisherClient | None = None
+_client_lock = threading.Lock()
+
+
+def _get_client() -> pubsub_v1.PublisherClient:
+    """Return a cached Pub/Sub PublisherClient instance (lazy-loaded and thread-safe)."""
+    global _publisher_client
+    if _publisher_client is None:
+        with _client_lock:
+            if _publisher_client is None:
+                _publisher_client = pubsub_v1.PublisherClient()
+    return _publisher_client
+
 
 def _publish_message(
     project_id: str,
@@ -28,7 +45,7 @@ def _publish_message(
     payload: dict,
 ) -> None:
     """Synchronous Pub/Sub publish (runs in thread-pool executor)."""
-    publisher = pubsub_v1.PublisherClient()
+    publisher = _get_client()
     topic_path = publisher.topic_path(project_id, topic_id)
 
     data = json.dumps(payload).encode("utf-8")

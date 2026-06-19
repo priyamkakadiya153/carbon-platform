@@ -364,6 +364,24 @@ class TestGeminiService:
                     ranked_categories=[], breakdown={}, total_kg=4000.0
                 )
 
+    @pytest.mark.asyncio
+    async def test_gemini_generate_insights_non_dict_element(self):
+        mock_response = MagicMock()
+        mock_response.text = json.dumps(["invalid element", 123, {}])
+
+        mock_model = MagicMock()
+        mock_model.generate_content.return_value = mock_response
+
+        with (
+            patch("app.services.gemini_service.vertexai.init"),
+            patch("app.services.gemini_service.GenerativeModel", return_value=mock_model),
+        ):
+            with pytest.raises(GeminiUnavailableError) as exc:
+                await gemini_service.generate_insights_gemini(
+                    ranked_categories=[], breakdown={}, total_kg=4000.0
+                )
+            assert "Gemini call failed" in str(exc.value)
+
 
 # ---------------------------------------------------------------------------
 # Endpoint conditional branching tests
@@ -457,4 +475,50 @@ class TestRoutingConditionalBranches:
             response = client.post("/api/insights", json=payload)
             assert response.status_code == 200
             mock_bq.assert_called_once()
+            mock_ps.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_routes_insights_analytics_with_inputs_logs_diet_type(self, client):
+        mock_settings = Settings(
+            USE_GEMINI=False, USE_FIRESTORE=False, USE_BIGQUERY=True, USE_PUBSUB=True
+        )
+
+        payload = {
+            "carbon_result": {
+                "total_kg": 5000.0,
+                "breakdown": {
+                    "transport": 2500.0,
+                    "home": 1000.0,
+                    "diet": 1000.0,
+                    "consumption": 500.0,
+                },
+                "vs_global_average_pct": 125.0,
+                "vs_paris_target_pct": 250.0,
+                "ranked_categories": [{"category": "transport", "kg": 2500.0, "percentage": 50.0}],
+                "device_id": "test-device-001",
+            },
+            "device_id": "test-device-001",
+            "inputs": {
+                "transport_km_car_petrol": 1000.0,
+                "home_electricity_kwh": 1000.0,
+                "household_size": 2,
+                "diet_type": "vegan",
+                "consumption_level": "low",
+                "device_id": "test-device-001",
+            }
+        }
+
+        with (
+            patch("app.routes.insights.get_settings", return_value=mock_settings),
+            patch("app.routes.insights.bigquery_service.log_event_async") as mock_bq,
+            patch("app.routes.insights.pubsub_service.publish_insight_request") as mock_ps,
+        ):
+            response = client.post("/api/insights", json=payload)
+            assert response.status_code == 200
+            mock_bq.assert_called_once_with(
+                total_kg=5000.0,
+                diet_type="vegan",
+                insight_source="rules",
+                top_category="transport",
+            )
             mock_ps.assert_called_once()

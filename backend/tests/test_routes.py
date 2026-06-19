@@ -154,6 +154,45 @@ class TestInsightsEndpoint:
         data = response.json()
         assert data["total_potential_saving_kg"] > 0
 
+    def test_insights_fallback_rules_uses_provided_inputs(
+        self,
+        client: TestClient,
+        sample_carbon_result: dict,
+        sample_carbon_input: dict,
+    ):
+        """When Gemini fails and custom inputs are provided, rule engine should use them."""
+        custom_input = sample_carbon_input.copy()
+        custom_input["diet_type"] = "meat_heavy"
+        custom_input["flights_short_haul"] = 5
+        custom_input["flights_long_haul"] = 3
+        custom_input["consumption_level"] = "high"
+
+        with (
+            patch(
+                "app.routes.insights.generate_insights_gemini",
+                new_callable=AsyncMock,
+                side_effect=GeminiUnavailableError("fallback required"),
+            ),
+            patch("app.routes.insights.get_settings") as mock_settings,
+        ):
+            mock_settings.return_value.USE_GEMINI = True
+            mock_settings.return_value.USE_BIGQUERY = False
+            mock_settings.return_value.USE_PUBSUB = False
+
+            response = client.post(
+                "/api/insights",
+                json={
+                    "carbon_result": sample_carbon_result,
+                    "device_id": "test-device-001",
+                    "inputs": custom_input,
+                },
+            )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["source"] == "rules"
+        categories_in_insights = [item["category"] for item in data["insights"]]
+        assert "diet" in categories_in_insights
+
 
 class TestEntriesEndpoint:
     """Tests for POST/GET /api/entries."""
@@ -173,6 +212,32 @@ class TestEntriesEndpoint:
         response = client.get("/api/entries/valid-device-001")
         assert response.status_code == 200
         assert isinstance(response.json(), list)
+
+    def test_entries_post_invalid_device_id(self, client: TestClient, sample_carbon_result: dict):
+        """POST /api/entries with invalid device_id in carbon_result should return 422."""
+        invalid_result = sample_carbon_result.copy()
+        invalid_result["device_id"] = "bad id!"
+        response = client.post(
+            "/api/entries",
+            json={
+                "carbon_result": invalid_result,
+                "insights": [],
+            },
+        )
+        assert response.status_code == 422
+
+    def test_entries_post_too_short_device_id(self, client: TestClient, sample_carbon_result: dict):
+        """POST /api/entries with too short device_id in carbon_result should return 422."""
+        invalid_result = sample_carbon_result.copy()
+        invalid_result["device_id"] = "short"
+        response = client.post(
+            "/api/entries",
+            json={
+                "carbon_result": invalid_result,
+                "insights": [],
+            },
+        )
+        assert response.status_code == 422
 
 
 class TestHealthEndpoint:

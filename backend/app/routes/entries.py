@@ -46,6 +46,12 @@ async def save_entry(request: Request, body: SaveEntryRequest) -> SaveEntryRespo
     settings = get_settings()
     device_id = body.carbon_result.device_id
 
+    if not validate_device_id(device_id):
+        raise HTTPException(
+            status_code=422,
+            detail="device_id must be 8–64 alphanumeric characters, hyphens, or underscores",
+        )
+
     if settings.USE_FIRESTORE:
         doc_id = await firestore_service.save_entry(
             device_id=device_id,

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import threading
 import uuid
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
@@ -27,6 +28,12 @@ logger = logging.getLogger(__name__)
 COLLECTION = "carbon_entries"
 
 # ---------------------------------------------------------------------------
+# Lazy-loaded cached client and thread safety lock
+# ---------------------------------------------------------------------------
+_firestore_client: FirestoreClient | None = None
+_client_lock = threading.Lock()
+
+# ---------------------------------------------------------------------------
 # In-memory fallback store (keyed by device_id, list of entries)
 # ---------------------------------------------------------------------------
 _memory_store: dict[str, list[dict[str, Any]]] = {}
@@ -38,8 +45,13 @@ _memory_store: dict[str, list[dict[str, Any]]] = {}
 
 
 def _get_client() -> FirestoreClient:
-    """Return a Firestore client instance (lazy, not cached — Cloud Run handles pooling)."""
-    return firestore.Client()
+    """Return a cached Firestore client instance (lazy-loaded and thread-safe)."""
+    global _firestore_client
+    if _firestore_client is None:
+        with _client_lock:
+            if _firestore_client is None:
+                _firestore_client = firestore.Client()
+    return _firestore_client
 
 
 def _build_document(
@@ -118,8 +130,11 @@ async def get_history(device_id: str, limit: int = 20) -> list[dict[str, Any]]:
             if data:
                 data["id"] = doc.id
                 # Convert Firestore Timestamp to ISO string for JSON serialisation
-                if hasattr(data.get("timestamp"), "isoformat"):
-                    data["timestamp"] = data["timestamp"].isoformat()
+                ts = data.get("timestamp")
+                if hasattr(ts, "isoformat"):
+                    data["timestamp"] = ts.isoformat()
+                else:
+                    data["timestamp"] = ""
                 entries.append(data)
         return entries
 
