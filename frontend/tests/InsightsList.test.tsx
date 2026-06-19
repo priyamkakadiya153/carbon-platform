@@ -11,7 +11,11 @@ const mockSaveEntry = vi.fn();
 
 vi.mock('../src/store/carbonStore', () => ({
   useCarbonStore: (selector: (s: Record<string, unknown>) => unknown) =>
-    selector({ saveEntry: mockSaveEntry }),
+    selector({
+      saveEntry: mockSaveEntry,
+      result: null,
+      committedActions: [],
+    }),
 }));
 
 const mockInsightsGemini: InsightsResponse = {

@@ -63,14 +63,14 @@ export const ActionPlanDashboard = () => {
       emoji: '🥗',
       title: 'Plant Power',
       desc: 'Dietary pattern is vegetarian or vegan.',
-      unlocked: baselineBreakdown !== null && (baselineBreakdown.diet ?? 0) <= 1200, // Vegan: 900kg, Veg: 1200kg, Med: 2000kg
+      unlocked: baselineBreakdown !== null && (baselineBreakdown.diet ?? 0) <= 1700, // Vegan: 1100kg, Veg: 1700kg
     },
     {
       id: 'waste',
       emoji: '🛍️',
       title: 'Zero Waste',
       desc: 'Minimal shopping emissions (under 600 kg CO₂e).',
-      unlocked: baselineBreakdown !== null && (baselineBreakdown.consumption ?? 0) <= 600, // Low: 600kg, Med: 1000kg, High: 2000kg
+      unlocked: baselineBreakdown !== null && (baselineBreakdown.consumption ?? 0) <= 1200, // Low: 1200kg
     },
     {
       id: 'offset',

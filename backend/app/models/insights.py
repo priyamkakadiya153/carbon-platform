@@ -6,7 +6,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from app.models.carbon import CarbonResult
+from app.models.carbon import CarbonInput, CarbonResult
 
 
 class InsightItem(BaseModel):
@@ -34,6 +34,7 @@ class InsightsRequest(BaseModel):
         pattern=r"^[a-zA-Z0-9_-]+$",
         description="Opaque anonymous device identifier",
     )
+    inputs: CarbonInput | None = Field(default=None, description="Original lifestyle inputs")
 
 
 class InsightsResponse(BaseModel):

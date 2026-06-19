@@ -39,9 +39,11 @@ export const InsightsList = ({ insightsResponse }: InsightsListProps) => {
   const reductionPercentage = currentTotal > 0 ? (committedSaving / currentTotal) * 100 : 0;
 
   const handleSave = async () => {
-    await saveEntry();
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 3000);
+    const success = await saveEntry();
+    if (success) {
+      setIsSaved(true);
+      setTimeout(() => setIsSaved(false), 3000);
+    }
   };
 
   return (
@@ -140,7 +142,7 @@ export const InsightsList = ({ insightsResponse }: InsightsListProps) => {
             <div className="relative w-full h-3 bg-gray-200/70 dark:bg-slate-800 rounded-full overflow-hidden">
               <div 
                 className="h-full bg-emerald-500 dark:bg-emerald-400 rounded-full transition-all duration-500"
-                style={{ width: `${Math.min(100, (2000 / projectedTotal) * 100)}%` }}
+                style={{ width: `${Math.min(100, projectedTotal > 0 ? (2000 / projectedTotal) * 100 : 100)}%` }}
               />
             </div>
           </div>

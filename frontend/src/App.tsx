@@ -57,6 +57,7 @@ function AppContent() {
   const isLoadingHistory = useCarbonStore(s => s.isLoadingHistory);
   const fetchHistory = useCarbonStore(s => s.fetchHistory);
   const reset = useCarbonStore(s => s.reset);
+  const error = useCarbonStore(s => s.error);
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -321,6 +322,21 @@ function AppContent() {
                 Track your footprint over time to see the impact of your changes.
               </p>
             </div>
+            {error && (
+              <div
+                role="alert"
+                aria-live="assertive"
+                className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-xl p-4 flex items-start gap-3"
+              >
+                <span className="text-red-500 text-lg" aria-hidden="true">
+                  ⚠️
+                </span>
+                <div>
+                  <p className="text-sm font-bold text-red-800 dark:text-red-300">Failed to load history</p>
+                  <p className="text-sm text-red-600 dark:text-red-450 mt-0.5">{error}</p>
+                </div>
+              </div>
+            )}
             {isLoadingHistory ? (
               <div className="flex justify-center py-16">
                 <LoadingSpinner label="Loading your history..." size="lg" />

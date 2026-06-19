@@ -101,6 +101,8 @@ vi.mock('../src/store/carbonStore', () => ({
       clearError: vi.fn(),
       isCalculating: false,
       calculate: vi.fn(),
+      result: null,
+      committedActions: [],
     }),
 }));
 

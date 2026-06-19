@@ -31,16 +31,27 @@ export const formatCategory = (category: string): string => {
  * Get or create a persistent anonymous device ID stored in localStorage.
  * Format: dev-{timestamp}-{random} — satisfies 8–64 char, alphanumeric + hyphens pattern.
  */
+let fallbackDeviceId: string | null = null;
+
 export const getDeviceId = (): string => {
   const key = 'carbon_device_id';
-  let id = localStorage.getItem(key);
-  if (!id) {
-    const ts = Date.now().toString(36);
-    const rand = Math.random().toString(36).slice(2, 10);
-    id = `dev-${ts}-${rand}`;
-    localStorage.setItem(key, id);
+  try {
+    let id = localStorage.getItem(key);
+    if (!id) {
+      const ts = Date.now().toString(36);
+      const rand = Math.random().toString(36).slice(2, 10);
+      id = `dev-${ts}-${rand}`;
+      localStorage.setItem(key, id);
+    }
+    return id;
+  } catch (e) {
+    if (!fallbackDeviceId) {
+      const ts = Date.now().toString(36);
+      const rand = Math.random().toString(36).slice(2, 10);
+      fallbackDeviceId = `dev-${ts}-${rand}`;
+    }
+    return fallbackDeviceId;
   }
-  return id;
 };
 
 /**

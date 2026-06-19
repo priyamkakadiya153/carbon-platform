@@ -47,11 +47,15 @@ export const apiClient = {
    * Generate personalised carbon reduction insights.
    * POST /api/insights
    */
-  async getInsights(carbon_result: CarbonResult, device_id: string): Promise<InsightsResponse> {
+  async getInsights(
+    carbon_result: CarbonResult,
+    device_id: string,
+    inputs?: CarbonInput
+  ): Promise<InsightsResponse> {
     const res = await fetch(`${BASE_URL}/insights`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ carbon_result, device_id }),
+      body: JSON.stringify({ carbon_result, device_id, inputs }),
     });
     return handleResponse<InsightsResponse>(res);
   },

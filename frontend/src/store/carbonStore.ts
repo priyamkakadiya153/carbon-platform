@@ -40,7 +40,7 @@ interface CarbonState {
   setInputs: (inputs: Partial<CarbonInput>) => void;
   calculate: (inputs: CarbonInput) => Promise<void>;
   fetchInsights: () => Promise<void>;
-  saveEntry: () => Promise<void>;
+  saveEntry: () => Promise<boolean>;
   fetchHistory: () => Promise<void>;
   setStep: (step: AppStep) => void;
   clearError: () => void;
@@ -60,7 +60,8 @@ export const useCarbonStore = create<CarbonState>((set, get) => ({
   committedActions: (() => {
     try {
       const saved = localStorage.getItem('carbon_committed_actions');
-      return saved ? JSON.parse(saved) : [];
+      const parsed = saved ? JSON.parse(saved) : [];
+      return Array.isArray(parsed) ? parsed : [];
     } catch {
       return [];
     }
@@ -95,13 +96,13 @@ export const useCarbonStore = create<CarbonState>((set, get) => ({
   },
 
   fetchInsights: async () => {
-    const { result } = get();
+    const { result, inputs } = get();
     if (!result) return;
 
     set({ isLoadingInsights: true, error: null });
     try {
       const deviceId = getDeviceId();
-      const insights = await apiClient.getInsights(result, deviceId);
+      const insights = await apiClient.getInsights(result, deviceId, inputs as CarbonInput);
       set({ insights, isLoadingInsights: false });
     } catch (err) {
       set({
@@ -113,12 +114,14 @@ export const useCarbonStore = create<CarbonState>((set, get) => ({
 
   saveEntry: async () => {
     const { result, insights } = get();
-    if (!result || !insights) return;
+    if (!result || !insights) return false;
 
     try {
       await apiClient.saveEntry(result, insights.insights);
+      return true;
     } catch (err) {
-      // Non-critical — log but don't surface to user
+      console.error('Failed to save entry:', err);
+      return false;
     }
   },
 
@@ -140,14 +143,23 @@ export const useCarbonStore = create<CarbonState>((set, get) => ({
 
   clearError: () => set({ error: null }),
 
-  reset: () =>
+  reset: () => {
+    try {
+      localStorage.removeItem('carbon_simulated_offset');
+      localStorage.removeItem('carbon_committed_actions');
+    } catch (e) {
+      console.warn('Failed to clear localStorage on reset', e);
+    }
     set({
       inputs: {},
       result: null,
       insights: null,
+      committedActions: [],
+      simulatedOffsetPct: 0,
       error: null,
       step: 'form',
-    }),
+    });
+  },
 
   commitAction: (action: InsightItem) => {
     const { committedActions } = get();
@@ -156,14 +168,22 @@ export const useCarbonStore = create<CarbonState>((set, get) => ({
       ...committedActions,
       { ...action, completed: false, committedAt: new Date().toISOString() },
     ];
-    localStorage.setItem('carbon_committed_actions', JSON.stringify(newActions));
+    try {
+      localStorage.setItem('carbon_committed_actions', JSON.stringify(newActions));
+    } catch (e) {
+      console.warn('Failed to save to localStorage', e);
+    }
     set({ committedActions: newActions });
   },
 
   uncommitAction: (actionText: string) => {
     const { committedActions } = get();
     const newActions = committedActions.filter(a => a.action !== actionText);
-    localStorage.setItem('carbon_committed_actions', JSON.stringify(newActions));
+    try {
+      localStorage.setItem('carbon_committed_actions', JSON.stringify(newActions));
+    } catch (e) {
+      console.warn('Failed to save to localStorage', e);
+    }
     set({ committedActions: newActions });
   },
 
@@ -172,12 +192,20 @@ export const useCarbonStore = create<CarbonState>((set, get) => ({
     const newActions = committedActions.map(a =>
       a.action === actionText ? { ...a, completed: !a.completed } : a
     );
-    localStorage.setItem('carbon_committed_actions', JSON.stringify(newActions));
+    try {
+      localStorage.setItem('carbon_committed_actions', JSON.stringify(newActions));
+    } catch (e) {
+      console.warn('Failed to save to localStorage', e);
+    }
     set({ committedActions: newActions });
   },
 
   setSimulatedOffsetPct: (pct: number) => {
-    localStorage.setItem('carbon_simulated_offset', pct.toString());
+    try {
+      localStorage.setItem('carbon_simulated_offset', pct.toString());
+    } catch (e) {
+      console.warn('Failed to save to localStorage', e);
+    }
     set({ simulatedOffsetPct: pct });
   },
 }));
